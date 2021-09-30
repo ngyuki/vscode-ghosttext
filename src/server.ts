@@ -57,14 +57,18 @@ interface GhostTextConnection {
     on(event: 'close', cb: () => void): this,
 }
 
-export const close = () => {
-    if (httpServer) {
-        httpServer.close();
-        httpServer = null;
-    }
+export const close = async () => {
+    return new Promise<void>(r => {
+        if (httpServer) {
+            httpServer.close(r);
+            httpServer = null;
+        } else {
+            r();
+        }
+    })
 }
 
-export const listen = (handler: (conn: GhostTextConnection) => void) => {
+export const listen = (serverPort: number, handler: (conn: GhostTextConnection) => void) => {
     httpServer = http.createServer((req, res) => {
         const wsServer = new WebSocket.Server({ port: 0 });
         wsServer.on('connection', (socket: WebSocket) => {
@@ -95,5 +99,5 @@ export const listen = (handler: (conn: GhostTextConnection) => void) => {
         }
     });
 
-    httpServer.listen(4001);
+    httpServer.listen(serverPort);
 }

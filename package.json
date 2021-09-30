@@ -17,7 +17,19 @@
         "vscode": "^1.44.0"
     },
     "main": "./dist/extension.js",
-    "contributes": {},
+    "contributes": {
+      "configuration": {
+        "type": "object",
+        "title": "Ghost Text",
+        "properties": {
+            "ghosttext.serverPort": {
+              "type": "number",
+              "default": 4001,
+              "description": "Server Port"
+            }
+        }
+      }
+    },
     "activationEvents": [
         "*"
     ],
