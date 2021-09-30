@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.0.4
+
+- Add CHANGELOG.md [#8](https://github.com/ngyuki/vscode-ghosttext/pull/8)
+
 ## v0.0.3
 
 - Keep connection to browser even when progress is close [#7](https://github.com/ngyuki/vscode-ghosttext/pull/7)
