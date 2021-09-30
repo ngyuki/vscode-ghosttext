@@ -64,7 +64,6 @@ export const activate = (context: vscode.ExtensionContext) => {
                     data.title + "\n" + data.url,
                     () => {
                         console.log('progress canceled');
-                        cleanup();
                     }
                 );
 
