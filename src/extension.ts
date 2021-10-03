@@ -1,6 +1,16 @@
 import * as vscode from 'vscode'
 import * as server from './server'
 
+const PACKAGE_NAME  = 'ghosttext';
+
+type Config = {
+    serverPort: number,
+}
+
+function readCohnfig(): Config {
+    return vscode.workspace.getConfiguration(PACKAGE_NAME) as unknown as Config;
+}
+
 async function updateDocument(document: vscode.TextDocument, text: string, selections: {start: number, end: number}[]) {
     if (!document.isClosed) {
         const editor = await vscode.window.showTextDocument(document);
@@ -41,10 +51,11 @@ async function closeDocument(document: vscode.TextDocument) {
     }
 }
 
-export const activate = (context: vscode.ExtensionContext) => {
-    console.log('extension activate');
+function startServer() {
+    const config = readCohnfig();
+    console.log(`extension config ... ${JSON.stringify(config)}`);
 
-    server.listen(conn => {
+    server.listen(config.serverPort, conn => {
         console.log('connected');
 
         const disposables: vscode.Disposable[] = [];
@@ -115,6 +126,19 @@ export const activate = (context: vscode.ExtensionContext) => {
             }
         });
     });
+}
+
+export const activate = (context: vscode.ExtensionContext) => {
+    console.log('extension activate');
+
+    startServer();
+
+    vscode.workspace.onDidChangeConfiguration(async (e) => {
+        if (e.affectsConfiguration(PACKAGE_NAME)) {
+            await server.close();
+            startServer();
+        }
+    })
 };
 
 export const deactivate = () => {
