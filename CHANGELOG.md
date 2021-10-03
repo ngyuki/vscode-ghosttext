@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.0.5
+
+- Add serverPort config [#9](https://github.com/ngyuki/vscode-ghosttext/pull/9)
+
 ## v0.0.4
 
 - Add CHANGELOG.md [#8](https://github.com/ngyuki/vscode-ghosttext/pull/8)
