@@ -1,103 +1,77 @@
-import * as http from 'http';
-import WebSocket from 'ws';
-import { EventEmitter } from 'events'
+import * as http from "node:http";
+import { WebSocket, WebSocketServer } from "ws"
 
-let httpServer: http.Server | null = null;
+export class GhostTextServer {
+    private server: http.Server;
+    private wss: WebSocketServer;
 
-class GhostTextConnection extends EventEmitter {
+    static async listen(serverPort: number, handler: (socket: WebSocket) => void) {
+        return new Promise<GhostTextServer>((resolve, reject) => {
+            const server = http.createServer();
+            const wss = new WebSocketServer({ server });
 
-    private socket: WebSocket | null;
+            const obj = new GhostTextServer(server, wss);
+            let done = false;
 
-    constructor(socket: WebSocket){
-        super();
+            server.on("error", err => {
+                if (!done) {
+                    done = true;
+                    reject(err);
+                }
+                void obj.close();
+            });
 
-        socket.on('message', (data) => {
-            this.emit('data', JSON.parse(data.toString()));
+            wss.on("error", err => {
+                if (!done) {
+                    done = true;
+                    reject(err);
+                }
+                void obj.close();
+            });
+
+            server.on("listening", () => {
+                if (!done) {
+                    done = true;
+                    resolve(obj);
+                }
+            });
+
+            server.on("request", (_, res) => {
+                res.writeHead(200, {
+                    "Content-Type": "application/json"
+                });
+                return res.end(JSON.stringify({
+                    ProtocolVersion: 1,
+                    WebSocketPort: serverPort,
+                }));
+            });
+
+            wss.on("connection", socket => handler(socket));
+
+            server.listen(serverPort, "127.0.0.1");
         });
-
-        socket.on('close', () => {
-            this.close();
-            this.emit('close');
-        });
-
-        this.socket = socket;
     }
 
-    close() {
-        if (this.socket) {
-            const c = this.socket;
-            this.socket = null;
-            c.close();
-        }
-
+    private constructor(server: http.Server, wss: WebSocketServer){
+        this.server = server;
+        this.wss = wss;
     }
 
-    send(text: string, selections: {start: number, end: number}[]) {
-        if (this.socket) {
-            this.socket.send(JSON.stringify({
-                title: '',
-                text:  text,
-                syntax: '',
-                selections: selections
-            }));
-        }
-    }
-}
-
-interface GhostTextData {
-    text: string,
-    selections: {start: number, end: number}[]
-    title: string,
-    url: string,
-    syntax: string,
-}
-
-interface GhostTextConnection {
-    on(event: 'data', cb: (data: GhostTextData) => void): this,
-    on(event: 'close', cb: () => void): this,
-}
-
-export const close = async () => {
-    return new Promise<void>(r => {
-        if (httpServer) {
-            httpServer.close(r);
-            httpServer = null;
-        } else {
-            r();
-        }
-    })
-}
-
-export const listen = (serverPort: number, handler: (conn: GhostTextConnection) => void) => {
-    httpServer = http.createServer((req, res) => {
-        const wsServer = new WebSocket.Server({ port: 0 });
-        wsServer.on('connection', (socket: WebSocket) => {
-            const conn = new GhostTextConnection(socket);
-            handler(conn);
-        });
-
-        wsServer.on('listening', () => {
-            const addr = wsServer.address();
-            if (typeof addr === 'string') {
-                res.writeHead(500, {'Content-Type': 'application/json'});
-                res.end(JSON.stringify({ error: "uanble listen port" }));
-                return;
-            }
-            res.writeHead(200, {'Content-Type': 'application/json'});
-            res.end(JSON.stringify({
-                ProtocolVersion: 1,
-                WebSocketPort: addr.port
-            }));
-        });
-    });
-
-    httpServer.on('error', (err: any) => {
-        if ((err.code === 'EADDRINUSE') && (err.syscall === 'listen')) {
-            console.log(err.message);
-        } else {
-            throw err;
-        }
-    });
-
-    httpServer.listen(serverPort);
+    async close() {
+        return Promise.all([
+            new Promise<void>((resolve, reject) => {
+                for (const client of this.wss.clients) {
+                    client.terminate();
+                }
+                this.wss.close(err => err ? reject(err) : resolve());
+            }),
+            new Promise<void>((resolve, reject) => {
+                if (this.server.listening) {
+                    this.server.close(err => err ? reject(err) : resolve());
+                } else {
+                    resolve();
+                }
+            }),
+        ]).catch(err => console.error("Failed to close server", err));
+    };
 }
