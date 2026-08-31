@@ -1,5 +1,12 @@
 # Change Log
 
+## v0.0.6
+
+- Modernize the extension runtime for current VS Code and Node.js versions
+- Serve HTTP and WebSocket connections on a shared loopback-only port
+- Improve message processing and connection resource cleanup
+- Package TypeScript sources for direct execution
+
 ## v0.0.5
 
 - Add serverPort config [#9](https://github.com/ngyuki/vscode-ghosttext/pull/9)
