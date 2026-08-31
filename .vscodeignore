@@ -1,5 +1,4 @@
 .vscode/**
 .gitignore
 tsconfig.json
-src/**
 Makefile
